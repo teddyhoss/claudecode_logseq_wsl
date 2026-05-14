@@ -4,5 +4,6 @@
   "author": "teddyhoss",
   "repo": "teddyhoss/logseq-claude-code-wsl",
   "icon": "icon.svg",
-  "theme": false
+  "theme": false,
+  "supportsDB": true
 }
