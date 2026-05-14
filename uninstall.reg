@@ -1,0 +1,6 @@
+Windows Registry Editor Version 5.00
+
+; Removes the `claudewsl://` URL protocol registration from the current user.
+; Double-click to undo setup.reg.
+
+[-HKEY_CURRENT_USER\Software\Classes\claudewsl]

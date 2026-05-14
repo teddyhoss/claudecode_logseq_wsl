@@ -1,0 +1,22 @@
+Windows Registry Editor Version 5.00
+
+; Registers `claudewsl://` URL protocol under the current user only (no admin needed).
+; Imported by double-clicking this file in Explorer, or via the
+; "Claude Code: install Windows protocol handler" command in Logseq.
+;
+; Uses %USERPROFILE% expansion at runtime, so it works for any Windows account
+; without editing this file.
+
+[HKEY_CURRENT_USER\Software\Classes\claudewsl]
+@="URL:Claude Code WSL Launcher"
+"URL Protocol"=""
+
+[HKEY_CURRENT_USER\Software\Classes\claudewsl\DefaultIcon]
+@="%USERPROFILE%\\.logseq\\plugins\\logseq-claude-code-wsl\\icon.svg"
+
+[HKEY_CURRENT_USER\Software\Classes\claudewsl\shell]
+
+[HKEY_CURRENT_USER\Software\Classes\claudewsl\shell\open]
+
+[HKEY_CURRENT_USER\Software\Classes\claudewsl\shell\open\command]
+@="cmd.exe /c \"%USERPROFILE%\\.logseq\\plugins\\logseq-claude-code-wsl\\launcher.cmd\""
