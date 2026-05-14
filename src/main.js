@@ -17,7 +17,7 @@ const settingsSchema = [
     key: 'graphPath',
     title: 'Graph directory (Windows path)',
     description:
-      'Windows path to the directory claude should open in. Example: `C:\\Users\\you\\Logseq` or the local Drive mirror `C:\\Users\\you\\My Drive\\my-graph`. Avoid pure virtual drive letters like `G:\\` -- WSL cannot translate them.',
+      'FIRST-TIME SETUP: open File Explorer at %USERPROFILE%\\.logseq\\plugins\\logseq-claude-code-wsl\\ and double-click setup.reg to register the claudewsl:// handler in the current user registry (no admin needed). To uninstall later, double-click uninstall.reg in the same folder. ----- This field: Windows path to the directory claude should open in. Example: C:\\Users\\you\\Logseq or a Drive mirror like C:\\Users\\you\\My Drive\\my-graph. Avoid pure virtual drive letters like G:\\ -- WSL cannot translate them. Required.',
     type: 'string',
     default: '',
   },
@@ -25,7 +25,7 @@ const settingsSchema = [
     key: 'claudeCommand',
     title: 'Claude command',
     description:
-      'Command executed inside WSL via `bash -lic`. Default: `claude`.',
+      'Command executed inside WSL via bash -lic. Default: claude.',
     type: 'string',
     default: 'claude',
   },
@@ -33,7 +33,7 @@ const settingsSchema = [
     key: 'wslDistribution',
     title: 'WSL distribution (optional)',
     description:
-      'Specific WSL distribution name (passed as `-d`). Leave empty for the default. Run `wsl -l -v` to list available distros.',
+      'Specific WSL distribution name (passed as -d). Leave empty for the default. Run "wsl -l -v" to list available distros.',
     type: 'string',
     default: '',
   },
@@ -41,18 +41,9 @@ const settingsSchema = [
     key: 'protocol',
     title: 'URL protocol name',
     description:
-      'Custom URL scheme that invokes the launcher. Must match the one in setup.reg. Change only if you have a conflict.',
+      'Custom URL scheme used to invoke the launcher. Must match the one registered by setup.reg. Default: claudewsl.',
     type: 'string',
     default: 'claudewsl',
-  },
-  {
-    key: 'firstTimeSetup',
-    title: 'First-time setup',
-    description:
-      'Before the toolbar button works, register the Windows URL protocol once. Open the command palette (`Ctrl+Shift+P`) and run **Claude Code: install Windows protocol handler**. To remove the registration use **Claude Code: uninstall Windows protocol handler**. **Claude Code: open plugin folder** shows the .reg files in Explorer if Logseq cannot launch them directly.',
-    type: 'string',
-    default: '',
-    inputAs: 'textarea',
   },
 ];
 
@@ -72,87 +63,40 @@ function triggerProtocolViaAnchor(url) {
   setTimeout(() => { try { a.remove(); } catch (_) {} }, 0);
 }
 
-async function tryOpenUrl(url) {
+async function launchClaude() {
+  const url = getProtocol() + '://';
   let lastErr = null;
-  try { triggerProtocolViaAnchor(url); return true; } catch (e) { lastErr = e; }
+
+  try {
+    triggerProtocolViaAnchor(url);
+    return;
+  } catch (err) {
+    console.warn('[claude-code-wsl] anchor click failed', err);
+    lastErr = err;
+  }
+
   try {
     const w = window.open(url, '_blank', 'noopener,noreferrer');
     if (w) setTimeout(() => { try { w.close(); } catch (_) {} }, 200);
-    return true;
-  } catch (e) { lastErr = e; }
-  try { await window.logseq.App.openExternalLink(url); return true; } catch (e) { lastErr = e; }
-  console.error('[claude-code-wsl] tryOpenUrl failed for ' + url, lastErr);
-  return false;
-}
-
-async function launchClaude() {
-  const url = getProtocol() + '://';
-  const ok = await tryOpenUrl(url);
-  if (!ok) {
-    await window.logseq.UI.showMsg(
-      'Claude Code: launch failed. Run "Claude Code: install Windows protocol handler" from the command palette first.',
-      'error'
-    );
+    return;
+  } catch (err) {
+    console.warn('[claude-code-wsl] window.open failed', err);
+    lastErr = err;
   }
-}
 
-function pluginFileUrl(filename) {
-  const userHome = (window.logseq.settings && window.logseq.settings._userHomeOverride) || '';
-  if (userHome) {
-    const cleaned = userHome.replace(/\\/g, '/').replace(/\/+$/, '');
-    return 'file:///' + cleaned + '/.logseq/plugins/' + PLUGIN_ID + '/' + filename;
+  try {
+    await window.logseq.App.openExternalLink(url);
+    return;
+  } catch (err) {
+    console.error('[claude-code-wsl] openExternalLink failed', err);
+    lastErr = err;
   }
-  // No override available: fall back to lsp:// (Logseq plugin resource URL) which may work
-  // for opening in Explorer, but the .reg execution needs a real file:// path. We rely on
-  // the user manually navigating via "open plugin folder" if openExternalLink rejects it.
-  return null;
-}
 
-async function installHandler() {
-  const url = pluginFileUrl('setup.reg');
-  if (url) {
-    const ok = await tryOpenUrl(url);
-    if (ok) {
-      await window.logseq.UI.showMsg(
-        'Opening setup.reg. Confirm the Windows prompt to register the protocol.',
-        'success'
-      );
-      return;
-    }
-  }
   await window.logseq.UI.showMsg(
-    'Logseq cannot launch the .reg directly. Run "Claude Code: open plugin folder" and double-click setup.reg in Explorer.',
-    'warning'
-  );
-}
-
-async function uninstallHandler() {
-  const url = pluginFileUrl('uninstall.reg');
-  if (url) {
-    const ok = await tryOpenUrl(url);
-    if (ok) {
-      await window.logseq.UI.showMsg(
-        'Opening uninstall.reg. Confirm the Windows prompt to remove the protocol.',
-        'success'
-      );
-      return;
-    }
-  }
-  await window.logseq.UI.showMsg(
-    'Logseq cannot launch the .reg directly. Run "Claude Code: open plugin folder" and double-click uninstall.reg in Explorer.',
-    'warning'
-  );
-}
-
-async function openPluginFolder() {
-  const url = pluginFileUrl('');
-  if (url) {
-    const ok = await tryOpenUrl(url.replace(/\/$/, ''));
-    if (ok) return;
-  }
-  await window.logseq.UI.showMsg(
-    'Open Explorer manually and navigate to %USERPROFILE%\\.logseq\\plugins\\' + PLUGIN_ID,
-    'warning'
+    'Claude Code: launch failed' +
+      (lastErr ? ' (' + lastErr.message + ')' : '') +
+      '. Did you import setup.reg? See plugin settings description.',
+    'error'
   );
 }
 
@@ -166,21 +110,6 @@ function main() {
   window.logseq.App.registerCommandPalette(
     { key: 'claude-code-launch', label: 'Claude Code: open in Windows Terminal' },
     launchClaude
-  );
-
-  window.logseq.App.registerCommandPalette(
-    { key: 'claude-code-install', label: 'Claude Code: install Windows protocol handler' },
-    installHandler
-  );
-
-  window.logseq.App.registerCommandPalette(
-    { key: 'claude-code-uninstall', label: 'Claude Code: uninstall Windows protocol handler' },
-    uninstallHandler
-  );
-
-  window.logseq.App.registerCommandPalette(
-    { key: 'claude-code-open-folder', label: 'Claude Code: open plugin folder' },
-    openPluginFolder
   );
 
   if (
@@ -198,12 +127,7 @@ function main() {
       '</a>',
   });
 
-  window.logseq.provideModel({
-    launchClaude,
-    installHandler,
-    uninstallHandler,
-    openPluginFolder,
-  });
+  window.logseq.provideModel({ launchClaude });
 }
 
 window.logseq.ready(main).catch((err) => {
