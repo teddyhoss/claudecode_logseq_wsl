@@ -1,0 +1,22 @@
+{
+  "name": "logseq-claude-code-wsl",
+  "version": "0.1.0",
+  "description": "Open Claude Code on your Logseq graph directory in a new Windows Terminal via WSL.",
+  "author": "teddy",
+  "license": "MIT",
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "node build.mjs --watch"
+  },
+  "dependencies": {
+    "@logseq/libs": "^0.2.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.21.5"
+  },
+  "logseq": {
+    "id": "logseq-claude-code-wsl",
+    "main": "dist/index.html",
+    "icon": "./icon.svg"
+  }
+}
