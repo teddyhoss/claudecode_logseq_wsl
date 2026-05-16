@@ -36,8 +36,8 @@ For Logseq Desktop on Windows with WSL.
 ### From source (development)
 
 ```
-git clone https://github.com/teddyhoss/logseq-claude-code-wsl
-cd logseq-claude-code-wsl
+git clone https://github.com/teddyhoss/claudecode_logseq_wsl
+cd claudecode_logseq_wsl
 npm install
 npm run build
 ```
